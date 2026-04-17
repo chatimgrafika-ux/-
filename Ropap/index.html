@@ -96,7 +96,7 @@
         display: block !important;
         position: static !important;
         width: 100% !important;
-        height: 100% !important;
+        height: auto !important;
         margin: 0 !important;
         padding: 0 !important;
         background: transparent !important;
@@ -200,7 +200,6 @@
   <div id="main-app" class="h-full w-full flex flex-col md:flex-row">
     
     <!-- LEFT: CONTROL PANEL (FORM) -->
-    <!-- Menambahkan "order-2 md:order-1" untuk mengatur form di bawah pada HP -->
     <div class="w-full md:w-[450px] lg:w-[500px] h-[55vh] md:h-full flex flex-col bg-white border-t md:border-t-0 md:border-r border-slate-200 shadow-2xl z-20 flex-shrink-0 order-2 md:order-1">
       
       <!-- HEADER -->
@@ -339,19 +338,20 @@
     </div>
 
     <!-- RIGHT: PREVIEW PANEL -->
-    <!-- Menambahkan "order-1 md:order-2" dan batas tinggi "h-[45vh] md:h-full" untuk layar HP -->
-    <div class="flex-1 h-[45vh] md:h-full bg-slate-800 overflow-y-auto p-4 md:p-10 flex justify-center items-start custom-scrollbar relative order-1 md:order-2" id="preview-section">
+    <!-- overflow-auto memastikan jika di zoom manual, user bisa geser. -->
+    <div class="flex-1 h-[45vh] md:h-full bg-slate-800 overflow-auto p-4 md:p-10 flex justify-center items-start custom-scrollbar relative order-1 md:order-2" id="preview-section">
       <!-- Zoom control for preview (hidden in print) -->
-      <div class="absolute top-4 right-6 z-20 flex gap-2 print:hidden bg-slate-900/80 p-2 rounded-xl backdrop-blur-md border border-slate-700">
-        <button onclick="adjustScale(-0.1)" class="text-white hover:text-emerald-400 p-1"><i data-lucide="zoom-out" class="w-5 h-5"></i></button>
-        <button onclick="adjustScale(0.1)" class="text-white hover:text-emerald-400 p-1"><i data-lucide="zoom-in" class="w-5 h-5"></i></button>
+      <div class="absolute top-4 right-6 z-20 flex gap-2 print:hidden bg-slate-900/80 p-2 rounded-xl backdrop-blur-md border border-slate-700 shadow-lg">
+        <button onclick="adjustScale(-0.05)" class="text-white hover:text-emerald-400 p-1" title="Perkecil"><i data-lucide="zoom-out" class="w-5 h-5"></i></button>
+        <button onclick="calculateAutoScale()" class="text-white hover:text-emerald-400 p-1 border-x border-slate-600 px-2 mx-1" title="Fit to Screen"><i data-lucide="maximize" class="w-5 h-5"></i></button>
+        <button onclick="adjustScale(0.05)" class="text-white hover:text-emerald-400 p-1" title="Perbesar"><i data-lucide="zoom-in" class="w-5 h-5"></i></button>
       </div>
 
       <!-- A4 Paper Container (Landscape) -->
-      <div class="cert-wrapper w-full overflow-x-auto custom-scrollbar flex justify-center pb-20 items-start transform origin-top" id="cert-wrapper">
+      <div class="w-full flex justify-center items-start pb-10 transition-all" id="cert-wrapper">
         
         <!-- Certificate DOM -->
-        <div class="certificate-container" id="cert-container">
+        <div class="certificate-container transform transition-transform duration-300" id="cert-container" style="transform-origin: top center;">
           <!-- Content will be injected here by JS -->
         </div>
 
@@ -423,7 +423,7 @@
         thumb: 'linear-gradient(135deg, #000000, #475569)',
         bgOut: 'bg-slate-900',
         bgInner: 'bg-[#111] border-4 border-yellow-600',
-        bgImage: 'https://lh3.googleusercontent.com/d/17UkFIKceKQjubOt5aK5864b9Mv1PmBMg',
+        bgImage: 'https://images.unsplash.com/photo-1565552643952-2508eb605b07?q=80&w=1000&auto=format&fit=crop',
         imageOpacity: 'opacity-25',
         title: 'text-yellow-500 font-serif font-black',
         textMain: 'text-gray-200 font-serif',
@@ -445,7 +445,7 @@
         thumb: 'linear-gradient(135deg, #eff6ff, #bfdbfe)',
         bgOut: 'bg-slate-100',
         bgInner: 'bg-white border-[8px] border-double border-slate-800',
-        bgImage: 'https://lh3.googleusercontent.com/d/1s4DYIJuN3qOkxO0RqFyT5tK9dDvgLm2Y',
+        bgImage: 'https://images.unsplash.com/photo-1584551246679-0daf3d275d0f?q=80&w=1000&auto=format&fit=crop',
         imageOpacity: 'opacity-15',
         title: 'text-slate-900 font-serif font-black',
         textMain: 'text-slate-800 font-serif',
@@ -640,20 +640,18 @@
       }
 
       loadSavedData();
-      adjustScale(0); 
+      calculateAutoScale(); // Set awal skala otomatis pas layar
       renderPreview();
     }
 
     // --- Logic Login & Intercept Print ---
-    // 1. Intercept Ctrl+P
     document.addEventListener('keydown', function(event) {
         if ((event.ctrlKey || event.metaKey) && event.key === 'p') {
-            event.preventDefault(); // cegah print default
-            attemptPrint(); // jalankan fungsi kita
+            event.preventDefault(); 
+            attemptPrint(); 
         }
     });
 
-    // 2. Hash Password di Client (SHA-256)
     async function hashPassword(message) {
         const msgBuffer = new TextEncoder().encode(message);                    
         const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
@@ -662,7 +660,6 @@
         return hashHex;
     }
 
-    // 3. Logic Show/Hide Modal
     function showLoginModal() {
         const modal = document.getElementById('loginModal');
         const view = document.getElementById('loginView');
@@ -677,33 +674,23 @@
         setTimeout(() => { modal.classList.add('hidden'); }, 300);
     }
 
-    // Fungsi khusus untuk mengatur nama file PDF saat dicetak
     function executePrint() {
         const originalTitle = document.title;
         const pesertaName = document.getElementById('b_peserta').value.trim() || 'Peserta';
-        
-        // Ubah title document sesaat sebelum print (ini akan jadi nama default file PDF)
         document.title = `Badal Umroh - ${pesertaName}`;
-        
         window.print();
-        
-        // Kembalikan title asli setelah dialog print terbuka
-        setTimeout(() => {
-            document.title = originalTitle;
-        }, 1000);
+        setTimeout(() => { document.title = originalTitle; }, 1000);
     }
 
-    // 4. Periksa apakah boleh print
     function attemptPrint() {
         const isAuth = sessionStorage.getItem('is_auth_print') === 'true';
         if (isAuth) {
-            executePrint(); // Jika sudah login di sesi ini, langsung panggil executePrint
+            executePrint();
         } else {
-            showLoginModal(); // Jika belum, tampilkan modal login
+            showLoginModal();
         }
     }
 
-    // 5. Handle Proses Login (Hit ke Google Apps Script API)
     async function handleLogin() {
         const pwdInput = document.getElementById('password').value;
         if (!pwdInput) return alert("Silakan masukkan sandi akses!");
@@ -716,7 +703,6 @@
         try {
             const hashedPwd = await hashPassword(pwdInput);
             
-            // Decode API URL yang disembunyikan
             let apiUrl = null;
             if (API_ENCODED !== 'YOUR_BASE64_ENCODED_API_URL_HERE') {
                 if (API_ENCODED.startsWith('http')) {
@@ -724,10 +710,7 @@
                 } else {
                     try {
                         let base64Str = API_ENCODED;
-                        // Tambahkan padding '=' untuk menghindari InvalidCharacterError pada atob
-                        while (base64Str.length % 4 !== 0) {
-                            base64Str += '=';
-                        }
+                        while (base64Str.length % 4 !== 0) { base64Str += '='; }
                         apiUrl = atob(base64Str);
                     } catch (e) {
                         console.warn("Peringatan: URL API gagal di-decode, menggunakan URL secara langsung.");
@@ -743,7 +726,6 @@
 
             const response = await fetch(apiUrl, {
                 method: 'POST',
-                // PENTING: Gunakan text/plain untuk menghindari error preflight CORS di Google Script
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                 body: JSON.stringify({ hash: hashedPwd })
             });
@@ -753,12 +735,7 @@
             if (result.status === 'success') {
                 sessionStorage.setItem('is_auth_print', 'true');
                 closeLoginModal();
-                
-                // Delay sejenak biar animasi modal tertutup rapi sebelum kotak dialog print muncul
-                setTimeout(() => {
-                    executePrint();
-                }, 400);
-
+                setTimeout(() => { executePrint(); }, 400);
             } else {
                 alert("Sandi akses yang Anda masukkan SALAH!");
                 document.getElementById('password').value = '';
@@ -774,11 +751,9 @@
         }
     }
 
-    // Enter key pada field password untuk submit
     document.getElementById('password').addEventListener('keypress', function (e) {
         if (e.key === 'Enter') handleLogin();
     });
-
 
     // --- Helper Format Date (Masehi & Hijriah) ---
     function formatHijriMasehi(dateStr, location) {
@@ -909,33 +884,44 @@
       }
     }
 
-    // --- View Controls ---
+    // --- View Controls (Auto Scale to Fit Screen) ---
     function adjustScale(change) {
       previewScale += change;
-      if (previewScale < 0.3) previewScale = 0.3;
-      if (previewScale > 1.5) previewScale = 1.5;
+      if (previewScale < 0.15) previewScale = 0.15;
+      if (previewScale > 2.0) previewScale = 2.0;
       
+      const container = document.getElementById('cert-container');
       const wrapper = document.getElementById('cert-wrapper');
       
       if (window.matchMedia('print').matches) {
-        wrapper.style.transform = `scale(1)`;
+        container.style.transform = `none`;
+        wrapper.style.height = 'auto';
       } else {
-        wrapper.style.transform = `scale(${previewScale})`;
+        container.style.transform = `scale(${previewScale})`;
+        // Mencegah ada area kosong yang besar setelah di-scale ke bawah
+        wrapper.style.height = `${794 * previewScale}px`; 
       }
     }
 
-    window.addEventListener('resize', () => {
-      // Pada HP (< 768px), kecilkan skala agar muat di preview-section yang lebih sempit
-      if (window.innerWidth < 768) { previewScale = 0.35; } 
-      else if (window.innerWidth < 1024) { previewScale = 0.6; }
-      else { previewScale = 0.8; }
+    function calculateAutoScale() {
+      const previewSection = document.getElementById('preview-section');
+      if (!previewSection) return;
+      
+      const certBaseWidth = 1123; // Estimasi 297mm dalam px pada 96 DPI
+      // Padding sisi kiri dan kanan (menghindari mentok pinggir layar)
+      const paddingX = window.innerWidth < 768 ? 32 : 80; 
+      
+      let autoScale = (previewSection.clientWidth - paddingX) / certBaseWidth;
+      
+      if (autoScale > 1.5) autoScale = 1.5;
+      if (autoScale < 0.15) autoScale = 0.15;
+      
+      previewScale = autoScale;
       adjustScale(0);
-    });
+    }
 
-    // Inisialisasi skala
-    if (window.innerWidth < 768) { previewScale = 0.35; } 
-    else if (window.innerWidth < 1024) { previewScale = 0.6; }
-    else { previewScale = 0.8; }
+    // Memastikan skala diperbarui secara dinamis saat ukuran jendela berubah (orientasi rotasi/HP/Desktop)
+    window.addEventListener('resize', calculateAutoScale);
 
     // --- Helper ---
     function val(id, fallback = '.........................') {
