@@ -11,6 +11,9 @@
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
 
+  <!-- html2pdf.js for Drive & Share feature -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;500;700;900&display=swap');
     
@@ -45,7 +48,7 @@
     /* Print Configuration - A4 Strict 100% Fit */
     @media print {
       @page { 
-        size: 210mm 297mm; 
+        size: A4 portrait; 
         margin: 0; 
       }
       html, body {
@@ -59,22 +62,37 @@
         overflow: hidden !important;
         background-color: white !important;
       }
+      /* Sembunyikan elemen UI secara total agar tidak mendorong tata letak */
+      header, #form-section, #splash-screen, .md\:hidden {
+        display: none !important;
+      }
+      /* Reset container pembungkus agar posisinya di kiri atas mutlak */
+      #main-app, #preview-wrapper {
+        display: block !important;
+        position: static !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        height: auto !important;
+        border: none !important;
+        transform: none !important;
+        text-align: left !important;
+        overflow: visible !important;
+      }
       body * { visibility: hidden; }
       #cv-preview, #cv-preview * { visibility: visible; }
       #cv-preview {
-        position: absolute !important; 
+        position: fixed !important; 
         left: 0 !important; 
         top: 0 !important;
-        right: 0 !important;
-        bottom: 0 !important;
         width: 210mm !important; 
         height: 297mm !important;
         margin: 0 !important; 
         padding: 0 !important;
         box-shadow: none !important; 
         border: none !important;
-        transform: scale(1) !important;
-        transform-origin: top left !important;
+        transform: none !important;
+        transform-origin: 0 0 !important;
       }
       * {
         -webkit-print-color-adjust: exact !important;
@@ -484,7 +502,10 @@
         </div>
       </div>
       <div class="flex items-center gap-2">
-        <button onclick="exportPDF()" class="flex items-center gap-2 bg-[var(--primary)] hover:bg-[var(--primary-dark)] text-white px-3 md:px-4 py-2 rounded-xl font-bold transition-colors shadow-md text-[10px] md:text-xs tracking-wider">
+        <button onclick="saveToDrive()" id="btn-drive" class="flex items-center gap-1.5 md:gap-2 bg-blue-600 hover:bg-blue-700 text-white px-3 md:px-4 py-2 rounded-xl font-bold transition-colors shadow-md text-[10px] md:text-xs tracking-wider">
+          <i data-lucide="cloud" class="w-4 h-4"></i> <span class="hidden md:inline">SIMPAN DRIVE</span><span class="md:hidden">DRIVE</span>
+        </button>
+        <button onclick="exportPDF()" class="flex items-center gap-1.5 md:gap-2 bg-[var(--primary)] hover:bg-[var(--primary-dark)] text-white px-3 md:px-4 py-2 rounded-xl font-bold transition-colors shadow-md text-[10px] md:text-xs tracking-wider">
           <i data-lucide="printer" class="w-4 h-4"></i> <span class="hidden md:inline">EXPORT PDF</span><span class="md:hidden">PDF</span>
         </button>
       </div>
@@ -1238,6 +1259,69 @@
       document.title = `CV-${userName}`;
       window.print();
       setTimeout(() => { document.title = originalTitle; }, 500);
+    };
+
+    // --- FUNGSI SIMPAN KE GOOGLE DRIVE / SHARE ---
+    const saveToDrive = async () => {
+      const btn = document.getElementById('btn-drive');
+      const originalText = btn.innerHTML;
+      
+      // Animasi Loading
+      btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> <span class="hidden md:inline">MEMPROSES...</span><span class="md:hidden">TUNGGU</span>`;
+      lucide.createIcons();
+      
+      const preview = document.getElementById('cv-preview');
+      const userName = document.getElementById('in-name').value.trim() || 'User';
+      const filename = `CV_${userName.replace(/\s+/g, '_')}.pdf`;
+      
+      // Reset skala transform sementara sebelum html2pdf membaca elemen
+      const oldTransform = preview.style.transform;
+      const oldMargin = preview.style.marginBottom;
+      preview.style.transform = 'none';
+      preview.style.marginBottom = '0';
+
+      const opt = {
+        margin:       0,
+        filename:     filename,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true, logging: false },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+
+      try {
+        // Generate file Blob
+        const pdfBlob = await html2pdf().set(opt).from(preview).output('blob');
+        
+        // Kembalikan ukuran pratinjau seperti semula
+        preview.style.transform = oldTransform;
+        preview.style.marginBottom = oldMargin;
+
+        const file = new File([pdfBlob], filename, { type: 'application/pdf' });
+
+        // Jika HP (Mendukung Share File PDF langsung ke Google Drive / WA)
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            files: [file],
+            title: 'File CV',
+            text: 'Berikut adalah file CV (A4) saya.'
+          });
+        } else {
+          // Jika di PC (Jatuh kembali ke mekanisme download biasa)
+          const link = document.createElement('a');
+          link.href = URL.createObjectURL(pdfBlob);
+          link.download = filename;
+          link.click();
+          alert("File berhasil diunduh! Silakan unggah ke Google Drive secara manual.");
+        }
+      } catch (error) {
+        console.error("Gagal membuat PDF:", error);
+        alert("Terjadi kesalahan saat memproses file PDF.");
+        preview.style.transform = oldTransform;
+        preview.style.marginBottom = oldMargin;
+      } finally {
+        btn.innerHTML = originalText;
+        lucide.createIcons();
+      }
     };
   </script>
 </body>
