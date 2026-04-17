@@ -1281,17 +1281,38 @@
       const userName = document.getElementById('in-name').value.trim() || 'User';
       const filename = `CV_${userName.replace(/\s+/g, '_')}.pdf`;
       
-      // Reset skala transform sementara sebelum html2pdf membaca elemen
+      // Simpan state asli
       const oldTransform = preview.style.transform;
       const oldMargin = preview.style.marginBottom;
+      const oldWidth = preview.style.width;
+      const oldHeight = preview.style.height;
+      const oldPosition = preview.style.position;
+
+      // Kunci presisi ke pixel A4 standar (96 DPI) agar html2canvas tidak terdistorsi oleh skala layar HP
       preview.style.transform = 'none';
       preview.style.marginBottom = '0';
+      preview.style.width = '794px';
+      preview.style.height = '1123px';
+      preview.style.position = 'relative';
+
+      // Pastikan font eksternal (Amiri & Inter) sudah termuat sempurna untuk bahasa Arab
+      await document.fonts.ready;
+      
+      // Beri sedikit jeda agar browser selesai me-repaint DOM dengan ukuran baru
+      await new Promise(resolve => setTimeout(resolve, 300));
 
       const opt = {
         margin:       0,
         filename:     filename,
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true, logging: false },
+        image:        { type: 'jpeg', quality: 1.0 },
+        html2canvas:  { 
+          scale: 3, // Skala tinggi untuk mencegah buram & teks pecah
+          useCORS: true, 
+          letterRendering: true,
+          windowWidth: 794,
+          width: 794,
+          scrollY: 0
+        },
         jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
       };
 
@@ -1302,6 +1323,9 @@
         // Kembalikan ukuran pratinjau seperti semula
         preview.style.transform = oldTransform;
         preview.style.marginBottom = oldMargin;
+        preview.style.width = oldWidth;
+        preview.style.height = oldHeight;
+        preview.style.position = oldPosition;
 
         const file = new File([pdfBlob], filename, { type: 'application/pdf' });
 
@@ -1329,17 +1353,24 @@
         }
       } catch (error) {
         // Pastikan bukan sekadar AbortError
-        if (error.name !== 'AbortError') {
+        if (error?.name !== 'AbortError') {
           console.error("Gagal membuat PDF:", error);
           alert("Terjadi kesalahan saat memproses file PDF.");
         }
+        // Kembalikan style jika terjadi error
         preview.style.transform = oldTransform;
         preview.style.marginBottom = oldMargin;
+        preview.style.width = oldWidth;
+        preview.style.height = oldHeight;
+        preview.style.position = oldPosition;
       } finally {
         btn.innerHTML = originalText;
         btn.disabled = false; // Aktifkan kembali tombol
         lucide.createIcons();
         isSharing = false;
+        
+        // Pastikan layout menyesuaikan kembali dengan layar HP
+        adjustPreviewScale();
       }
     };
   </script>
