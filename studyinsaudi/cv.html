@@ -284,14 +284,25 @@
       </div>
 
       <!-- Konten Modal -->
-      <div class="p-6 space-y-6 text-center">
+      <div class="p-6 space-y-5 text-center">
         <div>
           <p class="text-sm text-slate-600 font-medium mb-3">Scan QR Code di bawah untuk membeli Token Akses Premium. Harga hanya <span class="font-bold text-slate-800">Rp 15.000</span>.</p>
-          <div class="bg-slate-50 border border-slate-200 p-3 rounded-2xl inline-block shadow-sm">
-            <!-- Mock QR Code, silakan ganti src dengan URL QRIS Anda -->
-            <img src="https://lh3.googleusercontent.com/d/1O7yUWj8e0b7xl6nKXtrnQYAl1deHe2uN" alt="QRIS Payment" class="w-32 h-32 object-contain rounded-lg" />
+          
+          <!-- Box QRIS (Bisa diklik untuk unduh) -->
+          <div onclick="downloadQRIS()" class="bg-slate-50 border border-slate-200 p-3 rounded-2xl inline-block shadow-sm cursor-pointer hover:shadow-md hover:border-indigo-300 transition-all group relative" title="Klik untuk mengunduh gambar QRIS">
+            <img src="https://lh3.googleusercontent.com/d/1O7yUWj8e0b7xl6nKXtrnQYAl1deHe2uN" alt="QRIS Payment" class="w-32 h-32 object-contain rounded-lg group-hover:opacity-40 transition-opacity" />
+            <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+              <div class="bg-slate-900/80 text-white p-2.5 rounded-full backdrop-blur-sm">
+                <i data-lucide="download" class="w-5 h-5"></i>
+              </div>
+            </div>
           </div>
-          <p class="text-[10px] text-slate-400 mt-2 font-medium">Kirim bukti transfer ke Admin untuk mendapatkan Token.</p>
+          <p class="text-[10px] text-slate-500 mt-2 font-medium">Klik gambar QR untuk mengunduh ke galeri.</p>
+
+          <!-- Tombol Konfirmasi WA -->
+          <a href="https://wa.me/6281234567890?text=Assalamu%20a%27alaikum%20kak%2C%0A%0ASaya%20sudah%20melakukan%20pembayaran%20sejumlah%20*Rp.%2015.000*.%0A%0ABerikut%20saya%20lampirkan%20bukti%20pembayarannya%20untuk%20mendapatkan%20Token%20Akses%20Premium.%0A%0ATerima%20kasih." target="_blank" class="mt-3 inline-flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#1da851] text-white py-2.5 px-5 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-colors shadow-md w-full sm:w-auto">
+            <i data-lucide="message-circle" class="w-4 h-4"></i> Konfirmasi via WhatsApp
+          </a>
         </div>
 
         <div class="border-t border-slate-100 pt-5">
@@ -761,6 +772,27 @@
       modal.classList.add('opacity-0');
       card.classList.add('scale-95');
       setTimeout(() => modal.classList.add('hidden'), 300);
+    }
+
+    // --- FUNGSI UNDUH QRIS ---
+    async function downloadQRIS() {
+      const imgUrl = 'https://lh3.googleusercontent.com/d/1O7yUWj8e0b7xl6nKXtrnQYAl1deHe2uN';
+      try {
+        const response = await fetch(imgUrl);
+        const blob = await response.blob();
+        const blobUrl = window.URL.createObjectURL(blob);
+        
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = 'QRIS_Pembayaran_CV.png';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(blobUrl);
+      } catch (err) {
+        // Fallback (Buka di tab baru) jika fetch terblokir keamanan browser
+        window.open(imgUrl, '_blank');
+      }
     }
 
     async function verifyToken() {
