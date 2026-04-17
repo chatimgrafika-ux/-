@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Portal Pelajar - CV Builder F4</title>
+  <title>Portal Pelajar - CV Builder A4</title>
   
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -31,11 +31,10 @@
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: var(--primary); }
 
-    /* A4 PDF Container (210mm x 297mm) - Diubah dari F4 */
+    /* A4 PDF Container Strict (210mm x 297mm) */
     .pdf-container {
       width: 210mm;
-      min-height: 297mm;
-      max-height: 297mm;
+      height: 297mm; /* Dipatenkan (fixed), tidak pakai min/max lagi */
       overflow: hidden; 
       box-sizing: border-box;
       position: relative;
@@ -43,30 +42,39 @@
       margin: 0 auto;
     }
 
-    /* Print Configuration - A4 Strict */
+    /* Print Configuration - A4 Strict 100% Fit */
     @media print {
-      @page { size: A4; margin: 0mm; }
+      @page { 
+        size: 210mm 297mm; 
+        margin: 0; 
+      }
       html, body {
-        width: 210mm;
-        height: 297mm;
+        width: 210mm !important;
+        height: 297mm !important;
+        min-width: 210mm !important;
+        min-height: 297mm !important;
         margin: 0 !important;
         padding: 0 !important;
+        border: 0 !important;
         overflow: hidden !important;
         background-color: white !important;
       }
       body * { visibility: hidden; }
       #cv-preview, #cv-preview * { visibility: visible; }
       #cv-preview {
-        position: fixed !important; 
+        position: absolute !important; 
         left: 0 !important; 
         top: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
         width: 210mm !important; 
         height: 297mm !important;
         margin: 0 !important; 
         padding: 0 !important;
         box-shadow: none !important; 
         border: none !important;
-        transform: none !important;
+        transform: scale(1) !important;
+        transform-origin: top left !important;
       }
       * {
         -webkit-print-color-adjust: exact !important;
@@ -356,6 +364,98 @@
     .layout-12 #grid-skills .cv-heading { border-bottom-color: rgba(255,255,255,0.3); }
     .layout-12 .contact-line { flex-direction: column; text-align: center; gap: 0.5mm; padding: 1.5mm 0;}
 
+    /* ================= 7 LAYOUT BARU (13 - 19) ================= */
+
+    /* --- LAYOUT 13: GARIS PEMISAH (Vertical Split) --- */
+    .layout-13 {
+      padding: 10mm 15mm; gap: 4mm 8mm;
+      grid-template-columns: 50mm 1fr;
+      grid-template-areas: "photo title" "contact summary" "skills edu" "skills exp" ". rel" ". awd";
+    }
+    .layout-13 #grid-photo, .layout-13 #grid-contact, .layout-13 #grid-skills {
+      border-right: 2px solid var(--primary); padding-right: 6mm;
+    }
+    .layout-13 #grid-title, .layout-13 #grid-summary, .layout-13 #grid-edu, .layout-13 #grid-exp, .layout-13 #grid-rel, .layout-13 #grid-awd {
+      padding-left: 2mm;
+    }
+    .layout-13 .cv-heading { border-bottom: 2px solid var(--primary-bg); padding-bottom: 1mm; margin-bottom: 2mm;}
+
+    /* --- LAYOUT 14: KARTU MENGAMBANG (Floating Cards) --- */
+    .layout-14 {
+      padding: 8mm; gap: 4mm;
+      background-color: var(--primary-bg);
+      grid-template-columns: 1fr 1fr;
+      grid-template-areas: "photo title" "contact summary" "edu exp" "rel awd" "skills skills";
+    }
+    .layout-14 .grid-item { background: white; border-radius: 12px; padding: 6mm; box-shadow: 0 4px 6px rgba(0,0,0,0.02); }
+    .layout-14 #grid-photo { background: transparent; box-shadow: none; display: flex; justify-content: center; padding: 0;}
+    .layout-14 #grid-photo .border-2 { border-radius: 12px; }
+    .layout-14 #grid-title { background: transparent; box-shadow: none; display: flex; flex-direction: column; justify-content: center; padding: 0 0 0 4mm;}
+    .layout-14 .cv-heading { border-bottom: 1.5px solid var(--primary); padding-bottom: 1mm; }
+
+    /* --- LAYOUT 15: PITA ELEGAN (Ribbon Edge) --- */
+    .layout-15 {
+      padding: 0;
+      grid-template-columns: 1fr 1fr;
+      grid-template-areas: "title title" "photo contact" "summary summary" "edu exp" "rel awd" "skills skills";
+    }
+    .layout-15 #grid-title { background: var(--primary-bg); padding: 10mm 15mm 5mm 15mm; text-align: center; }
+    .layout-15 .grid-item:not(#grid-title) { padding: 2mm 15mm 4mm 15mm; }
+    .layout-15 #grid-photo { display: flex; justify-content: center; }
+    .layout-15 .cv-heading { background: var(--primary); padding: 1.5mm 15mm; margin: 0 -15mm 3mm -15mm; }
+    .layout-15 .cv-heading .en, .layout-15 .cv-heading .ar { color: white; }
+
+    /* --- LAYOUT 16: HEADER GELAP (Dark Executive) --- */
+    .layout-16 {
+      padding: 0; gap: 4mm 8mm;
+      grid-template-columns: 50mm 1fr;
+      grid-template-areas: "photo title" "contact summary" "skills edu" "skills exp" "skills rel" "skills awd";
+    }
+    .layout-16::before { content:''; position:absolute; top:0; left:0; width:100%; height: 50mm; background: var(--primary-dark); z-index: 1;}
+    .layout-16 #grid-title h1, .layout-16 #grid-title h2 { color: white !important; }
+    .layout-16 #grid-photo { padding: 10mm 0 0 12mm; }
+    .layout-16 #grid-photo .border-2 { border-color: white; border-radius: 8px;}
+    .layout-16 #grid-title { padding: 12mm 12mm 0 0; text-align: right; }
+    .layout-16 #grid-contact, .layout-16 #grid-skills { padding: 0 0 0 12mm; }
+    .layout-16 .grid-item:not(#grid-title):not(#grid-photo) { margin-top: 4mm; padding-right: 12mm;}
+    .layout-16 .cv-heading { border-bottom: 2px solid var(--primary-dark); }
+
+    /* --- LAYOUT 17: AKADEMIK FORMAL (Classic Academic) --- */
+    .layout-17 {
+      padding: 12mm 15mm; gap: 3mm 8mm;
+      grid-template-columns: 1fr;
+      grid-template-areas: "title" "contact" "photo" "summary" "edu" "exp" "rel" "awd" "skills";
+      text-align: center;
+    }
+    .layout-17 #grid-title h1, .layout-17 #grid-title h2 { color: #1e293b !important; }
+    .layout-17 #grid-photo { display: flex; justify-content: center; margin-bottom: 2mm;}
+    .layout-17 #grid-contact { display: flex; flex-wrap: wrap; justify-content: center; gap: 4mm; border-top: 1.5px solid #1e293b; border-bottom: 1.5px solid #1e293b; padding: 2mm 0; margin-bottom: 2mm;}
+    .layout-17 .contact-line { border: none; padding: 0;}
+    .layout-17 .cv-heading { justify-content: center; border-bottom: 1.5px solid #1e293b; color: #1e293b; padding-bottom: 1mm;}
+    .layout-17 .text-left, .layout-17 .text-right { text-align: center; }
+
+    /* --- LAYOUT 18: GRID KOTAK (Boxed Grid) --- */
+    .layout-18 {
+      padding: 10mm 12mm; gap: 4mm;
+      grid-template-columns: 1fr 1fr;
+      grid-template-areas: "photo title" "contact summary" "edu exp" "rel awd" "skills skills";
+    }
+    .layout-18 .grid-item { border: 1px solid var(--primary); padding: 4mm; border-radius: 6px;}
+    .layout-18 #grid-photo, .layout-18 #grid-title { border: none; padding: 2mm;}
+    .layout-18 #grid-title { display: flex; flex-direction: column; justify-content: center; text-align: right;}
+    .layout-18 .cv-heading { border-bottom: 2px solid var(--primary-bg); margin-bottom: 2mm; padding-bottom: 1mm;}
+
+    /* --- LAYOUT 19: ASIMETRIS KANAN (Right Accent) --- */
+    .layout-19 {
+      padding: 12mm 15mm; gap: 5mm 8mm;
+      grid-template-columns: 1fr 45mm;
+      grid-template-areas: "title photo" "summary contact" "edu skills" "exp skills" "rel skills" "awd skills";
+    }
+    .layout-19 #grid-photo { display: flex; justify-content: flex-end;}
+    .layout-19 #grid-title { align-self: center; border-left: 6px solid var(--accent); padding-left: 4mm;}
+    .layout-19 .cv-heading { color: var(--accent); border-bottom: 1.5px solid var(--accent); padding-bottom: 1mm;}
+    .layout-19 #grid-contact, .layout-19 #grid-skills { background: var(--primary-bg); padding: 4mm; border-radius: 12px; border-right: 4px solid var(--primary);}
+
   </style>
 </head>
 <body class="bg-slate-50 text-slate-900 overflow-hidden">
@@ -380,7 +480,7 @@
         <img src="https://lh3.googleusercontent.com/d/1T_gjbh4D8xTkoE3zVF0WoQl5xdhb3nCJ" class="w-10 h-10 object-contain" alt="Logo" />
         <div>
           <h1 class="text-[13px] md:text-[14px] font-black text-slate-800 tracking-tighter uppercase">Portal Pelajar</h1>
-          <p class="text-[9px] text-[var(--primary)] uppercase font-black tracking-widest">CV Builder Terintegrasi (F4)</p>
+          <p class="text-[9px] text-[var(--primary)] uppercase font-black tracking-widest">CV Builder Terintegrasi (A4)</p>
         </div>
       </div>
       <div class="flex items-center gap-2">
@@ -585,10 +685,10 @@
           <!-- LAYOUT STRUCTURE -->
           <section class="bg-indigo-50 p-5 rounded-[1.5rem] border border-indigo-100">
             <h2 class="text-sm font-black flex items-center gap-2 text-indigo-900 mb-4 uppercase tracking-wider">
-              <i data-lucide="layout-template" class="text-indigo-600 w-4 h-4"></i> Struktur CV (13 Pilihan)
+              <i data-lucide="layout-template" class="text-indigo-600 w-4 h-4"></i> Struktur CV (20 Pilihan)
             </h2>
-            <!-- Grid disesuaikan untuk menampung lebih banyak tombol -->
-            <div id="layout-container" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+            <!-- Grid disesuaikan untuk menampung 20 tombol rapi (5 kolom x 4 baris) -->
+            <div id="layout-container" class="grid grid-cols-4 sm:grid-cols-5 gap-2">
               <!-- Tombol Layout via JS -->
             </div>
           </section>
@@ -798,6 +898,19 @@
     lucide.createIcons();
     let photoDataUrl = null;
 
+    // Pastikan saat dicetak (print), skala di-reset ke normal agar tidak terpotong atau mengecil
+    window.addEventListener('beforeprint', () => {
+      const preview = document.getElementById('cv-preview');
+      if(preview) {
+        preview.style.transform = 'none';
+        preview.style.marginBottom = '0';
+      }
+    });
+
+    window.addEventListener('afterprint', () => {
+      adjustPreviewScale();
+    });
+
     // --- LOGIKA PENYESUAIAN SKALA PREVIEW (MOBILE RESPONSIVE) ---
     const adjustPreviewScale = () => {
       const wrapper = document.getElementById('preview-wrapper');
@@ -872,7 +985,7 @@
       setTimeout(adjustPreviewScale, 310);
     }
 
-    // --- 13 STRUKTUR LAYOUT ---
+    // --- 20 STRUKTUR LAYOUT ---
     const layoutOptions = [
       { id: 'layout-0', name: 'Klasik Minimalis', icon: 'layout-template' },
       { id: 'layout-1', name: 'Sidebar Kiri', icon: 'layout-sidebar' },
@@ -886,7 +999,14 @@
       { id: 'layout-9', name: 'Organik Fluid', icon: 'shapes' },
       { id: 'layout-10', name: 'Geometris', icon: 'triangle' },
       { id: 'layout-11', name: 'Garis Waktu', icon: 'git-commit' },
-      { id: 'layout-12', name: 'Solid Blok', icon: 'square' }
+      { id: 'layout-12', name: 'Solid Blok', icon: 'square' },
+      { id: 'layout-13', name: 'Garis Pemisah', icon: 'separator-vertical' },
+      { id: 'layout-14', name: 'Kartu Elegan', icon: 'gallery-vertical' },
+      { id: 'layout-15', name: 'Pita Header', icon: 'bookmark' },
+      { id: 'layout-16', name: 'Header Gelap', icon: 'monitor-up' },
+      { id: 'layout-17', name: 'Akademik', icon: 'book-open' },
+      { id: 'layout-18', name: 'Grid Kotak', icon: 'grid' },
+      { id: 'layout-19', name: 'Asimetris', icon: 'list-end' }
     ];
 
     const renderLayouts = () => {
@@ -896,7 +1016,7 @@
         btn.className = "flex flex-col items-center justify-center p-1.5 rounded-xl border-2 border-transparent bg-white hover:border-indigo-300 hover:shadow-md transition-all group h-14";
         btn.innerHTML = `
           <i data-lucide="${layout.icon}" class="w-4 h-4 text-indigo-400 group-hover:text-indigo-600 mb-1 transition-colors"></i>
-          <span class="text-[8px] font-bold text-slate-600 group-hover:text-indigo-700 text-center leading-tight px-1">${layout.name}</span>
+          <span class="text-[7.5px] font-bold text-slate-600 group-hover:text-indigo-700 text-center leading-tight px-0.5 break-words w-full">${layout.name}</span>
         `;
         btn.onclick = () => applyLayout(idx, btn);
         container.appendChild(btn);
