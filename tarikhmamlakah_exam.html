@@ -43,12 +43,15 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                     <label class="block text-sm font-bold text-gray-600 mb-2">الاسم الكامل</label>
-                    <input type="text" id="studentName" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-shadow" placeholder="أدخل اسمك الكامل هنا">
+                    <input type="text" id="studentName" oninput="saveIdentity()" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-shadow" placeholder="أدخل اسمك الكامل هنا">
                 </div>
                 <div>
                     <label class="block text-sm font-bold text-gray-600 mb-2">الرقم الجامعي / الشعبة</label>
-                    <input type="text" id="studentId" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-shadow" placeholder="أدخل الرقم الجامعي أو الشعبة">
+                    <input type="text" id="studentId" oninput="saveIdentity()" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-shadow" placeholder="أدخل الرقم الجامعي أو الشعبة">
                 </div>
+            </div>
+            <div class="mt-4 text-left">
+                 <button onclick="clearSession()" class="text-sm text-red-600 hover:text-red-800 font-bold underline transition-colors">مسح الإجابات المحفوظة (إعادة ضبط)</button>
             </div>
         </div>
 
@@ -163,8 +166,8 @@
         { q: "متى تم إنشاء مجمع الملك فهد لطباعة المصحف الشريف؟", opts: ["عام 1405 هـ.", "عام 1373 هـ.", "عام 1426 هـ.", "عام 1395 هـ.", "عام 1402 هـ."], c: 0, r: "تم إنشاؤه في عام 1405 هـ كأحد جهود الملك فهد في خدمة الإسلام." }
     ];
 
-    // Mengacak susunan soal dan opsi (Opsional, tapi bagus untuk ujian)
-    function shuffle(array) {
+    // Mengacak susunan array
+    function shuffleArray(array) {
         let currentIndex = array.length, randomIndex;
         while (currentIndex != 0) {
             randomIndex = Math.floor(Math.random() * currentIndex);
@@ -174,18 +177,60 @@
         return array;
     }
 
+    // Menyimpan identitas ke local storage
+    function saveIdentity() {
+        localStorage.setItem('quiz_name', document.getElementById('studentName').value);
+        localStorage.setItem('quiz_id', document.getElementById('studentId').value);
+    }
+
+    // Menyimpan jawaban ke local storage
+    function saveAnswer(qIdx, optIdx) {
+        let savedAnswers = JSON.parse(localStorage.getItem('quiz_answers')) || {};
+        savedAnswers[`q_${qIdx}`] = optIdx;
+        localStorage.setItem('quiz_answers', JSON.stringify(savedAnswers));
+    }
+
+    // Menghapus sesi lokal
+    function clearSession() {
+        if(confirm("هل أنت متأكد من مسح جميع إجاباتك المحفوظة؟ (Yakin ingin menghapus progress Anda?)")) {
+            localStorage.removeItem('quiz_answers');
+            localStorage.removeItem('quiz_name');
+            localStorage.removeItem('quiz_id');
+            localStorage.removeItem('quiz_submitted');
+            location.reload();
+        }
+    }
+
     // Merender Soal ke dalam HTML
     window.onload = () => {
         const container = document.getElementById('mcqContainer');
         
+        // Restore identity dari local storage
+        document.getElementById('studentName').value = localStorage.getItem('quiz_name') || '';
+        document.getElementById('studentId').value = localStorage.getItem('quiz_id') || '';
+
+        // Restore jawaban dari local storage
+        const savedAnswers = JSON.parse(localStorage.getItem('quiz_answers')) || {};
+
         rawQuestions.forEach((qObj, idx) => {
             let optionsHtml = '';
             
-            qObj.opts.forEach((optText, optIdx) => {
+            // Mapping opsi untuk menyimpan index original (agar kunci jawaban tetap cocok meski diacak)
+            let mappedOptions = qObj.opts.map((text, originalIndex) => {
+                return { text: text, originalIndex: originalIndex };
+            });
+
+            // Acak opsi jawaban untuk setiap soal
+            mappedOptions = shuffleArray(mappedOptions);
+            
+            mappedOptions.forEach((opt) => {
+                // Cek apakah opsi ini yang dipilih sebelumnya di local storage
+                const isChecked = savedAnswers[`q_${idx}`] == opt.originalIndex ? 'checked' : '';
+
                 optionsHtml += `
                     <label class="flex items-start p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-blue-50 transition-colors">
-                        <input type="radio" name="q_${idx}" value="${optIdx}" class="me-4 mt-1 text-blue-600 focus:ring-blue-500 h-5 w-5">
-                        <span class="text-gray-700 text-base font-semibold leading-relaxed">${optText}</span>
+                        <input type="radio" name="q_${idx}" value="${opt.originalIndex}" onchange="saveAnswer(${idx}, ${opt.originalIndex})" class="me-4 mt-1 text-blue-600 focus:ring-blue-500 h-5 w-5" ${isChecked}>
+                        <span class="text-gray-700 text-base font-semibold leading-relaxed">${opt.text}</span>
                     </label>
                 `;
             });
@@ -202,64 +247,76 @@
                 </div>
             `;
         });
+
+        // Cek apakah ujian sudah pernah disubmit sebelumnya di sesi ini
+        if (localStorage.getItem('quiz_submitted') === 'true') {
+            submitExam(true);
+        }
     };
 
-    function submitExam() {
-        const name = document.getElementById('studentName').value;
-        
-        if(confirm("هل أنت متأكد من رغبتك في تسليم الاختبار؟ لا يمكن التراجع عن هذه الخطوة.")){
-            let score = 0;
-            const reviewContainer = document.getElementById('mcqReviewContainer');
-            reviewContainer.innerHTML = '';
+    function submitExam(isAutoSubmit = false) {
+        if(!isAutoSubmit && !confirm("هل أنت متأكد من رغبتك في تسليم الاختبار؟ لا يمكن التراجع عن هذه الخطوة.")){
+            return;
+        }
 
-            rawQuestions.forEach((qObj, idx) => {
-                const selected = document.querySelector(`input[name="q_${idx}"]:checked`);
-                const userVal = selected ? parseInt(selected.value) : -1;
-                const isCorrect = userVal === qObj.c;
-                
-                if(isCorrect) score++;
+        let score = 0;
+        const reviewContainer = document.getElementById('mcqReviewContainer');
+        reviewContainer.innerHTML = '';
 
-                const statusColor = isCorrect ? 'text-green-700 bg-green-50 border-green-300' : 'text-red-700 bg-red-50 border-red-300';
-                const statusIcon = isCorrect ? '✅ إجابة صحيحة' : '❌ إجابة خاطئة';
-                const userText = userVal >= 0 ? qObj.opts[userVal] : 'لم تتم الإجابة';
-                
-                reviewContainer.innerHTML += `
-                    <div class="p-6 border rounded-xl ${statusColor}">
-                        <h5 class="font-bold text-lg mb-3 flex items-start">
-                            <span class="me-2 text-gray-500">السؤال ${idx+1}:</span> 
-                            <span class="text-gray-800">${qObj.q}</span>
-                        </h5>
-                        <div class="space-y-2 mb-4 ps-2 border-r-4 ${isCorrect ? 'border-green-400' : 'border-red-400'}">
-                            <p class="text-md font-semibold text-gray-700">إجابتك: <span class="${isCorrect ? 'text-green-700' : 'text-red-600'} font-bold">${userText}</span></p>
-                            ${!isCorrect ? `<p class="text-md font-semibold text-gray-700">الإجابة الصحيحة: <span class="text-green-700 font-bold">${qObj.opts[qObj.c]}</span></p>` : ''}
-                            <p class="text-sm font-bold ${isCorrect ? 'text-green-600' : 'text-red-600'}">${statusIcon}</p>
-                        </div>
-                        <div class="text-sm p-4 bg-white bg-opacity-80 rounded-lg border border-gray-200 text-gray-800 shadow-sm">
-                            <strong class="text-blue-800 flex items-center gap-2 mb-1">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                التفسير / التعليل:
-                            </strong> 
-                            <span class="font-semibold">${qObj.r}</span>
-                        </div>
+        rawQuestions.forEach((qObj, idx) => {
+            const selected = document.querySelector(`input[name="q_${idx}"]:checked`);
+            const userVal = selected ? parseInt(selected.value) : -1;
+            const isCorrect = userVal === qObj.c;
+            
+            if(isCorrect) score++;
+
+            const statusColor = isCorrect ? 'text-green-700 bg-green-50 border-green-300' : 'text-red-700 bg-red-50 border-red-300';
+            const statusIcon = isCorrect ? '✅ إجابة صحيحة' : '❌ إجابة خاطئة';
+            const userText = userVal >= 0 ? qObj.opts[userVal] : 'لم تتم الإجابة';
+            
+            reviewContainer.innerHTML += `
+                <div class="p-6 border rounded-xl ${statusColor}">
+                    <h5 class="font-bold text-lg mb-3 flex items-start">
+                        <span class="me-2 text-gray-500">السؤال ${idx+1}:</span> 
+                        <span class="text-gray-800">${qObj.q}</span>
+                    </h5>
+                    <div class="space-y-2 mb-4 ps-2 border-r-4 ${isCorrect ? 'border-green-400' : 'border-red-400'}">
+                        <p class="text-md font-semibold text-gray-700">إجابتك: <span class="${isCorrect ? 'text-green-700' : 'text-red-600'} font-bold">${userText}</span></p>
+                        ${!isCorrect ? `<p class="text-md font-semibold text-gray-700">الإجابة الصحيحة: <span class="text-green-700 font-bold">${qObj.opts[qObj.c]}</span></p>` : ''}
+                        <p class="text-sm font-bold ${isCorrect ? 'text-green-600' : 'text-red-600'}">${statusIcon}</p>
                     </div>
-                `;
-            });
+                    <div class="text-sm p-4 bg-white bg-opacity-80 rounded-lg border border-gray-200 text-gray-800 shadow-sm">
+                        <strong class="text-blue-800 flex items-center gap-2 mb-1">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            التفسير / التعليل:
+                        </strong> 
+                        <span class="font-semibold">${qObj.r}</span>
+                    </div>
+                </div>
+            `;
+        });
 
-            // Update UI
-            document.getElementById('mcqScoreDisplay').innerText = `${score}/60`;
-            document.getElementById('mcqDetailDisplay').innerText = `إجابة صحيحة ${score} من أصل 60 سؤال`;
+        // Update UI Score
+        document.getElementById('mcqScoreDisplay').innerText = `${score}/60`;
+        document.getElementById('mcqDetailDisplay').innerText = `إجابة صحيحة ${score} من أصل 60 سؤال`;
 
-            // Disable inputs
-            document.querySelectorAll('input, button').forEach(el => {
-                if(el.id !== 'submitBtn') el.disabled = true;
-            });
-            document.getElementById('submitBtn').style.display = 'none';
+        // Nonaktifkan semua input agar tidak bisa diedit setelah submit
+        document.querySelectorAll('input, button').forEach(el => {
+            if(el.id !== 'submitBtn' && el.getAttribute('onclick') !== 'clearSession()') el.disabled = true;
+        });
+        document.getElementById('submitBtn').style.display = 'none';
 
-            // Show result
-            const resultSection = document.getElementById('resultSection');
-            resultSection.classList.remove('hidden-result');
+        // Tampilkan bagian hasil
+        const resultSection = document.getElementById('resultSection');
+        resultSection.classList.remove('hidden-result');
+        
+        // Scroll otomatis hanya jika disubmit secara manual
+        if(!isAutoSubmit) {
             resultSection.scrollIntoView({ behavior: 'smooth' });
         }
+
+        // Tandai bahwa ujian sudah disubmit di local storage
+        localStorage.setItem('quiz_submitted', 'true');
     }
 </script>
 </body>
